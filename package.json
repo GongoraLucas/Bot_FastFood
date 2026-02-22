@@ -1,0 +1,19 @@
+{
+  "name": "fastfoodmilly.com",
+  "version": "1.0.0",
+  "description": "Bot de WhastsApp Fast Food Milly para demo de tesis",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "body-parser": "^2.2.2",
+    "dotenv": "^17.3.1",
+    "express": "^5.2.1",
+    "twilio": "^5.12.2"
+  }
+}
