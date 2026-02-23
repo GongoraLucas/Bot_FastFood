@@ -141,7 +141,15 @@ exports.handleMessage = async (req, res) => {
   const user = users[from];
 
   user.inactivitySent = false;
-  startInactivityTimer(from);
+
+  // solo activar inactividad en flujo de pedido
+  const orderStates = ["haciendo_pedido", "confirmando", "eliminando_producto"];
+
+  if (orderStates.includes(user.status)) {
+    startInactivityTimer(from);
+  } else {
+    clearUserTimer(user);
+  }
 
   /**
    * VOLVER UNIVERSAL
@@ -253,7 +261,7 @@ exports.handleMessage = async (req, res) => {
         return sendResponse(
           res,
           twiml,
-          `🎉 ¡Pedido confirmado!\n\nTu orden estará lista en 20 minutos 🚚\n\n${messages.welcome}`
+          `🎉 ¡Pedido confirmado!\n\nTu orden estará lista en 20 minutos 🚚\n\n`
         );
 
       case "2":
@@ -270,7 +278,7 @@ exports.handleMessage = async (req, res) => {
       case "5":
         clearUserTimer(user);
         resetToMainMenu(user);
-        return sendResponse(res, twiml, `❌ Tu pedido fue cancelado.\n\n${messages.welcome}`);
+        return sendResponse(res, twiml, `❌ Tu pedido fue cancelado.\n\n`);
 
       default:
         return sendResponse(
