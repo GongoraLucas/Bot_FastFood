@@ -25,6 +25,15 @@ const products = {
 
 /**
  * ===============================
+ * PROMOCIONES
+ * ===============================
+ */
+const promotions = {
+  1: { id: "promo1", name: "Hamburguesa + Salchipapas", price: 5.0 },
+};
+
+/**
+ * ===============================
  * UTILIDADES
  * ===============================
  */
@@ -52,6 +61,32 @@ function clearUserTimer(user) {
  * GENERADORES
  * ===============================
  */
+
+function generatePromotionMenu() {
+  let text = messages.promotions + "\n\n";
+
+  Object.keys(promotions).forEach((key) => {
+    const promo = promotions[key];
+    text += `${key}. ${promo.name} - $${promo.price.toFixed(2)}\n`;
+  });
+
+  text += "\nEscoja la promoción que desea o escriba *volver* para regresar al menú principal.";
+
+  return text;
+}
+
+function generatePromotionSummary(user) {
+  const promo = user.currentOrder[0];
+
+  return (
+    "🧾 *Resumen de tu pedido:*\n\n" +
+    `1. ${promo.name} - $${promo.price.toFixed(2)}\n\n` +
+    `💵 *Total:* $${promo.price.toFixed(2)}\n\n` +
+    "1️⃣ Confirmar pedido\n" +
+    "2️⃣ Ver método de pago\n" +
+    "3️⃣ Cancelar pedido"
+  );
+}
 
 function generateSummary(user) {
   let total = 0;
@@ -139,11 +174,14 @@ exports.handleMessage = async (req, res) => {
   }
 
   const user = users[from];
-
   user.inactivitySent = false;
 
-  // solo activar inactividad en flujo de pedido
-  const orderStates = ["haciendo_pedido", "confirmando", "eliminando_producto"];
+  const orderStates = [
+    "haciendo_pedido",
+    "confirmando",
+    "eliminando_producto",
+    "confirmando_promocion",
+  ];
 
   if (orderStates.includes(user.status)) {
     startInactivityTimer(from);
@@ -151,18 +189,12 @@ exports.handleMessage = async (req, res) => {
     clearUserTimer(user);
   }
 
-  /**
-   * VOLVER UNIVERSAL
-   */
   if (lowerMsg === "volver") {
     clearUserTimer(user);
     resetToMainMenu(user);
     return sendResponse(res, twiml, messages.welcome);
   }
 
-  /**
-   * RESPUESTA A INACTIVIDAD
-   */
   if (user.status === "esperando_respuesta_inactividad") {
     if (incomingMsg === "1") {
       user.status = user.statusBeforeInactivity || "esperando_opcion";
@@ -177,9 +209,6 @@ exports.handleMessage = async (req, res) => {
     return sendResponse(res, twiml, "1️⃣ Continuar\n2️⃣ Volver al menú");
   }
 
-  /**
-   * SALUDO INICIAL
-   */
   if (user.status === "inicio") {
     user.status = "esperando_opcion";
     return sendResponse(res, twiml, messages.welcome);
@@ -198,7 +227,8 @@ exports.handleMessage = async (req, res) => {
         return sendResponse(res, twiml, messages.menu);
 
       case "3":
-        return sendResponse(res, twiml, messages.promotions);
+        user.status = "viendo_promociones";
+        return sendResponse(res, twiml, generatePromotionMenu());
 
       case "4":
         return sendResponse(res, twiml, messages.location);
@@ -215,8 +245,49 @@ exports.handleMessage = async (req, res) => {
   }
 
   /**
-   * HACIENDO PEDIDO
+   * VIENDO PROMOCIONES
    */
+  if (user.status === "viendo_promociones") {
+    if (!promotions[incomingMsg]) {
+      return sendResponse(res, twiml, "⚠️ Opción inválida. Selecciona una promoción válida o escribe *volver*.");
+    }
+
+    const selectedPromo = promotions[incomingMsg];
+
+    user.currentOrder = [{ ...selectedPromo, quantity: 1 }];
+    user.status = "confirmando_promocion";
+
+    return sendResponse(res, twiml, generatePromotionSummary(user));
+  }
+
+  /**
+   * CONFIRMANDO PROMOCIÓN
+   */
+  if (user.status === "confirmando_promocion") {
+    switch (incomingMsg) {
+      case "1":
+        clearUserTimer(user);
+        user.currentOrder = [];
+        user.status = "esperando_opcion";
+        return sendResponse(res, twiml, `🎉 ¡Pedido confirmado!\n\nTu orden estará lista en 20 minutos 🚚`);
+
+      case "2":
+        return sendResponse(res, twiml, "💵 Método de pago disponible:\n\n• Efectivo");
+
+      case "3":
+        clearUserTimer(user);
+        resetToMainMenu(user);
+        return sendResponse(res, twiml, `❌ Pedido cancelado.\n\n${messages.welcome}`);
+
+      default:
+        return sendResponse(res, twiml, "1️⃣ Confirmar pedido\n2️⃣ Ver método de pago\n3️⃣ Cancelar pedido");
+    }
+  }
+
+  /**
+   * AQUÍ SIGUE TODO TU FLUJO ORIGINAL SIN TOCAR
+   */
+
   if (user.status === "haciendo_pedido") {
     if (incomingMsg === "0") {
       if (user.currentOrder.length === 0) {
@@ -249,20 +320,13 @@ exports.handleMessage = async (req, res) => {
     return sendResponse(res, twiml, "⚠️ Selecciona un número válido del menú.");
   }
 
-  /**
-   * CONFIRMANDO
-   */
   if (user.status === "confirmando") {
     switch (incomingMsg) {
       case "1":
         clearUserTimer(user);
         user.currentOrder = [];
         user.status = "esperando_opcion";
-        return sendResponse(
-          res,
-          twiml,
-          `🎉 ¡Pedido confirmado!\n\nTu orden estará lista en 20 minutos 🚚\n\n`
-        );
+        return sendResponse(res, twiml, `🎉 ¡Pedido confirmado!\n\nTu orden estará lista en 20 minutos 🚚\n\n`);
 
       case "2":
         user.status = "eliminando_producto";
@@ -289,9 +353,6 @@ exports.handleMessage = async (req, res) => {
     }
   }
 
-  /**
-   * ELIMINAR PRODUCTO
-   */
   if (user.status === "eliminando_producto") {
     const index = Number(incomingMsg) - 1;
 
