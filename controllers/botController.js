@@ -63,14 +63,20 @@ function clearUserTimer(user) {
  */
 
 function generatePromotionMenu() {
-  let text = messages.promotions + "\n\n";
+  const numberEmojis = ["0️⃣","1️⃣","2️⃣","3️⃣","4️⃣","5️⃣","6️⃣","7️⃣","8️⃣","9️⃣"];
+
+  let text = "🎉 *Promociones disponibles:*\n\n";
+  text += "Escribe el número de la promoción que deseas:\n\n";
 
   Object.keys(promotions).forEach((key) => {
     const promo = promotions[key];
-    text += `${key}. ${promo.name} - $${promo.price.toFixed(2)}\n`;
+    const index = parseInt(key, 10); // 🔹 convertimos a número
+
+    text += `${numberEmojis[index]} ${promo.name} - $${promo.price.toFixed(2)}\n`;
   });
 
-  text += "\nEscoja la promoción que desea o escriba *volver* para regresar al menú principal.";
+  text += "\n✏️ Ejemplo: escribe 1\n";
+  text += "O escribe *volver* para regresar al menú principal.";
 
   return text;
 }
