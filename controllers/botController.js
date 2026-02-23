@@ -30,6 +30,7 @@ const products = {
  */
 const promotions = {
   1: { id: "promo1", name: "Hamburguesa + Salchipapas", price: 5.0 },
+  2: { id: "promo2", name: "Papi Pollo + Salchipapas", price: 5.5 },
 };
 
 /**
